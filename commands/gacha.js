@@ -668,9 +668,47 @@ async function cmdGachaMenu(sock, msg, sender) {
   if (isOwner(sender)) {
     const owner = section("👑", "GACHA — OWNER", [
       "*.newchar Nombre | Serie | waifu/husband | rareza* — crea un personaje nuevo",
+      "*.claimpj <ID>* — reclama directo cualquier personaje del pool (ej: c051x)",
     ]);
     text += `\n\n${owner}`;
   }
+
+  await sock.sendMessage(from, { text }, { quoted: msg });
+}
+
+// ─────────────────────────────────────────────────────────────
+// .claimpj — el owner reclama directamente cualquier personaje del pool
+// ─────────────────────────────────────────────────────────────
+
+async function cmdClaimPj(sock, msg, args, sender) {
+  const from = msg.key.remoteJid;
+
+  if (!isOwner(sender)) {
+    return sock.sendMessage(from, { text: "⛔ Solo el owner puede usar este comando." }, { quoted: msg });
+  }
+
+  const num = touchProfile(msg, sender);
+  const id = (args[0] || "").toLowerCase();
+
+  if (!id) {
+    return sock.sendMessage(
+      from,
+      { text: "📌 Uso: *.claimpj <ID de personaje>* — ej: .claimpj c051x\nLos IDs base son c001–c050, los creados con .newchar terminan en 'x'." },
+      { quoted: msg }
+    );
+  }
+
+  const character = gacha.getCharacterById(id);
+  if (!character) {
+    return sock.sendMessage(from, { text: `❌ No existe ningún personaje en el pool con el ID *${id}*.` }, { quoted: msg });
+  }
+
+  const instance = gacha.grantCharacter(num, character.id);
+
+  const text = characterCard(character, {
+    header: `👑 *Reclamo directo de owner*\n\n`,
+    footer: `\n🆔 ID de tu nueva ficha: *${instance.instanceId}*`,
+  });
 
   await sock.sendMessage(from, { text }, { quoted: msg });
 }
@@ -689,5 +727,6 @@ module.exports = {
   cmdVotar,
   cmdWtop,
   cmdNewChar,
+  cmdClaimPj,
   cmdGachaMenu,
 };
