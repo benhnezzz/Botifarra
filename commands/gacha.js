@@ -643,6 +643,7 @@ async function cmdGachaMenu(sock, msg, sender) {
     "*.clain* <nombre> — reclama el personaje recién tirado (90s)",
     "*.harem* [@mención] — ver personajes reclamados",
     "*.delchar* <ID> — elimina un personaje de tu harem",
+    "*.verpj* <ID de personaje> — ver la ficha de cualquier personaje del pool",
   ]);
 
   const mercado = section("💱", "GACHA — MERCADO", [
@@ -713,6 +714,35 @@ async function cmdClaimPj(sock, msg, args, sender) {
   await sock.sendMessage(from, { text }, { quoted: msg });
 }
 
+// ─────────────────────────────────────────────────────────────
+// .verpj — ver la ficha de cualquier personaje del pool (sin reclamarlo)
+// ─────────────────────────────────────────────────────────────
+
+async function cmdVerPj(sock, msg, args) {
+  const from = msg.key.remoteJid;
+  const id = (args[0] || "").toLowerCase();
+
+  if (!id) {
+    return sock.sendMessage(
+      from,
+      { text: "📌 Uso: *.verpj <ID de personaje>* — ej: .verpj c051x\nLos IDs base son c001–c050, los creados con .newchar terminan en 'x'." },
+      { quoted: msg }
+    );
+  }
+
+  const character = gacha.getCharacterById(id);
+  if (!character) {
+    return sock.sendMessage(from, { text: `❌ No existe ningún personaje en el pool con el ID *${id}*.` }, { quoted: msg });
+  }
+
+  const text = characterCard(character, {
+    header: `🔎 *Ficha de personaje*\n\n`,
+    footer: `\n🆔 ID de pool: *${character.id}*`,
+  });
+
+  await sock.sendMessage(from, { text }, { quoted: msg });
+}
+
 module.exports = {
   cmdRw,
   cmdClain,
@@ -728,5 +758,6 @@ module.exports = {
   cmdWtop,
   cmdNewChar,
   cmdClaimPj,
+  cmdVerPj,
   cmdGachaMenu,
 };
