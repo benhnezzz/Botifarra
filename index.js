@@ -87,7 +87,24 @@ const {
   cmdMiNivel,
   cmdVerNivel,
   cmdNiveles,
+  cmdEconomyMenu,
 } = require("./commands/economy");
+const {
+  cmdRw,
+  cmdClain,
+  cmdHarem,
+  cmdDelChar,
+  cmdSell,
+  cmdWshop,
+  cmdBuyc,
+  cmdGiveChar,
+  cmdGiveAll,
+  cmdTrade,
+  cmdVotar,
+  cmdWtop,
+  cmdNewChar,
+  cmdGachaMenu,
+} = require("./commands/gacha");
 
 // --- Red de seguridad: un error suelto (ej. rate-limit de WhatsApp) no debe
 // tumbar el proceso completo. Solo lo logueamos y seguimos corriendo.
@@ -469,6 +486,67 @@ async function startBot() {
           await cmdNiveles(sock, msg);
           break;
 
+        case "economy":
+          await cmdEconomyMenu(sock, msg);
+          break;
+
+        // ── Gacha ──
+        case "rw":
+          await cmdRw(sock, msg, sender);
+          break;
+
+        case "clain":
+          await cmdClain(sock, msg, args, sender);
+          break;
+
+        case "harem":
+          await cmdHarem(sock, msg, args, sender);
+          break;
+
+        case "delchar":
+          await cmdDelChar(sock, msg, args, sender);
+          break;
+
+        case "sell":
+          await cmdSell(sock, msg, args, sender);
+          break;
+
+        case "wshop":
+          await cmdWshop(sock, msg);
+          break;
+
+        case "buyc":
+          await cmdBuyc(sock, msg, args, sender);
+          break;
+
+        case "givechar":
+          await cmdGiveChar(sock, msg, args, sender);
+          break;
+
+        case "giveall":
+          await cmdGiveAll(sock, msg, args, sender);
+          break;
+
+        case "trade":
+          await cmdTrade(sock, msg, args, sender);
+          break;
+
+        case "votar":
+          await cmdVotar(sock, msg, args, sender);
+          break;
+
+        case "wtop":
+          await cmdWtop(sock, msg);
+          break;
+
+        case "newchar":
+          await cmdNewChar(sock, msg, args, sender);
+          break;
+
+        case "gacha":
+          await cmdGachaMenu(sock, msg, sender);
+          break;
+
         case "pull":
           await cmdPull(sock, msg, args);
           break;
@@ -704,6 +782,17 @@ async function startBot() {
             "*.minivel* — tu nivel y progreso actual",
             "*.vernivel* @mención — nivel de otro usuario",
             "*.niveles* — lista completa de rangos",
+            "*.economy* — ver este mismo listado aparte, como comando propio",
+          ]);
+
+          const gachaSection = section("🧩", "GACHA (personajes)", [
+            "*.gacha* — menú completo con TODOS los comandos de gacha",
+            "*.rw* — tira un waifu/husband aleatorio",
+            "*.clain* <nombre> — reclama el personaje tirado",
+            "*.harem* [@mención] — ver personajes reclamados",
+            "*.wshop* / *.buyc* / *.sell* — mercado de personajes",
+            "*.trade* / *.givechar* / *.giveall* — intercambia o regala",
+            "*.votar* / *.wtop* — vota y ve el ranking de valor",
           ]);
 
           const adminSection = section("👮", "ADMINISTRACIÓN DEL GRUPO", [
@@ -751,7 +840,7 @@ async function startBot() {
             `   🧉 *BOTIFARRA BOT*\n` +
             `╰───────────────────╯\n` +
             `_Prefijo:_ \`.\`   _Escribí *.menu* cuando quieras volver a verlo_\n\n` +
-            `${generalSection}\n\n${economiaSection}\n\n${stickersSection}\n\n${descargasSection}\n\n${extrasSection}`;
+            `${generalSection}\n\n${economiaSection}\n\n${gachaSection}\n\n${stickersSection}\n\n${descargasSection}\n\n${extrasSection}`;
 
           if (senderIsOwnerOrCo) {
             text += `\n\n${adminSection}\n\n${ownerSection}`;
