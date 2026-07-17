@@ -1,0 +1,44 @@
+module.exports = {
+  // Cada owner tiene su número real y, opcionalmente, uno o más "lid" (el ID anónimo
+  // interno que WhatsApp usa a veces en vez del número real -- ver nota abajo).
+  //
+  // - number: tu número real de WhatsApp. Se usa para reconocerte como owner Y para
+  //           mostrarlo en comandos como .owner (ej: link wa.me/tunumero).
+  // - lids:   uno o más identificadores @lid que WhatsApp te haya asignado. Solo hacen
+  //           falta si el bot no te reconoce usando tu número real (algunos grupos/cuentas
+  //           usan @lid en vez del número). Corre .debugadmin en un grupo para ver tu lid
+  //           actual si no estás seguro.
+  //
+  // Se puede sobreescribir con las variables de entorno OWNER_NUMBER y OWNER_LIDS
+  // (esta última separada por comas).
+  OWNERS: [
+    {
+      number: process.env.OWNER_NUMBER || "56512222222",
+      lids: process.env.OWNER_LIDS
+        ? process.env.OWNER_LIDS.split(",")
+        : ["79401697992881"],
+    },
+    {
+      number: "56712222222",
+      lids: ["148039671009295"],
+    },
+  ],
+
+  // Número de WhatsApp DEL BOT (el que se va a vincular), en formato
+  // internacional SIN "+" ni espacios. Ej: "56912345678".
+  // Si lo dejas vacío (""), el bot te lo va a preguntar por consola cada vez
+  // que necesite vincularse (solo pasa si no existe auth_info/ o se borró).
+  // También se puede definir con la variable de entorno PAIRING_NUMBER.
+  PAIRING_NUMBER: process.env.PAIRING_NUMBER || "",
+
+  // Prefijo de los comandos
+  PREFIX: ".",
+
+  // Nombre por defecto del paquete de stickers si no se especifica uno
+  DEFAULT_PACK_NAME: "Bromingo",
+  DEFAULT_AUTHOR: "Botifarra",
+
+  // Si es true, cuando el owner entra a un grupo donde el bot YA es admin,
+  // el bot lo asciende automáticamente
+  AUTO_ADMIN_OWNER: true,
+};
