@@ -103,6 +103,7 @@ const {
   cmdVotar,
   cmdWtop,
   cmdNewChar,
+  cmdClaimPj,
   cmdGachaMenu,
 } = require("./commands/gacha");
 
@@ -541,6 +542,10 @@ async function startBot() {
 
         case "newchar":
           await cmdNewChar(sock, msg, args, sender);
+          break;
+
+        case "claimpj":
+          await cmdClaimPj(sock, msg, args, sender);
           break;
 
         case "gacha":
