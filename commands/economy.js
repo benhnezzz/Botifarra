@@ -679,6 +679,55 @@ async function cmdNiveles(sock, msg) {
   await sock.sendMessage(from, { text: `🏅 *RANGOS DISPONIBLES*\n\n${lines.join("\n")}` }, { quoted: msg });
 }
 
+// ─────────────────────────────────────────────────────────────
+// .economy — menú con todos los comandos de economía
+// ─────────────────────────────────────────────────────────────
+
+async function cmdEconomyMenu(sock, msg) {
+  const from = msg.key.remoteJid;
+
+  const section = (emoji, title, lines) =>
+    `┌ ${emoji} *${title}*\n` + lines.map((l) => `│ ${l}`).join("\n") + `\n└─────────────`;
+
+  const cartera = section("👛", "ECONOMÍA — CARTERA", [
+    "*.cartera* [@mención] — saldo disponible (efectivo + banco)",
+    "*.dep* <cantidad|todo> — deposita dinero en el banco",
+    "*.ret* <cantidad|todo> — retira dinero del banco",
+    "*.regalar* @mención <cantidad> — transfiere dinero a otro usuario",
+    "*.rankcoins* — ranking global de los más ricos",
+  ]);
+
+  const ingresos = section("💼", "ECONOMÍA — GANAR DINERO", [
+    "*.daily* — recompensa diaria",
+    "*.work* — trabaja para ganar dinero",
+    "*.crimen* — intenta un golpe (puede salir mal)",
+    "*.robar* @mención — intenta robarle a otro usuario",
+    "*.pescar* — pesca y vende lo que saques",
+    "*.minar* — extrae y vende recursos",
+  ]);
+
+  const juegos = section("🎲", "ECONOMÍA — JUEGOS", [
+    "*.casino* <cantidad> — tragamonedas",
+    "*.dado* <cantidad> — tirada de dado contra el bot",
+    "*.flip* <cara|cruz> <cantidad> — lanzamiento de moneda",
+    "*.blackdice* @mención <cantidad> — duelo de dados contra otro usuario",
+  ]);
+
+  const niveles = section("🏅", "ECONOMÍA — NIVELES", [
+    "*.tiendarpg* comprar/vender <cantidad> — cambia monedas por XP o viceversa",
+    "*.ranknivel* — ranking global por nivel/XP",
+    "*.minivel* — tu nivel y progreso actual",
+    "*.vernivel* @mención — nivel de otro usuario",
+    "*.niveles* — lista completa de rangos",
+  ]);
+
+  const text =
+    `🪙 *SISTEMA DE ECONOMÍA*\n\n${cartera}\n\n${ingresos}\n\n${juegos}\n\n${niveles}` +
+    `\n\n_Tip: tu dinero también sirve para comprar personajes en *.gacha* → .wshop_`;
+
+  await sock.sendMessage(from, { text }, { quoted: msg });
+}
+
 module.exports = {
   cmdCartera,
   cmdDeposit,
@@ -700,4 +749,5 @@ module.exports = {
   cmdMiNivel,
   cmdVerNivel,
   cmdNiveles,
+  cmdEconomyMenu,
 };
