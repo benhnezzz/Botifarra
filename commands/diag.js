@@ -58,6 +58,28 @@ function checkConfigOwners() {
   return { ok: true, detail: `${owners.length} owner(s) configurado(s)` };
 }
 
+function checkAnthropicKey() {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) {
+    return { ok: false, reason: "no está definida en el .env (.rpgcrearclase/.rpgcrearraza no van a funcionar)" };
+  }
+  if (!key.startsWith("sk-ant-")) {
+    return { ok: false, reason: "está definida pero no parece una clave válida (debería empezar con 'sk-ant-')" };
+  }
+  return { ok: true, detail: `${key.slice(0, 10)}…` };
+}
+
+function checkCustomRpgContent() {
+  try {
+    const { getCustomClassMeta, getCustomRaces } = require("../lib/customRpgContent");
+    const classCount = Object.keys(getCustomClassMeta()).length;
+    const raceCount = Object.keys(getCustomRaces()).length;
+    return { ok: true, detail: `${classCount} clase(s), ${raceCount} raza(s) creadas con IA` };
+  } catch (err) {
+    return { ok: false, reason: err.message };
+  }
+}
+
 async function runEnvironmentChecks(sock) {
   const [ffmpeg, git, ytdlp] = await Promise.all([
     checkBinary("ffmpeg", "-version"),
@@ -75,6 +97,8 @@ async function runEnvironmentChecks(sock) {
     storage: checkStorage(),
     auth: checkAuth(),
     owners: checkConfigOwners(),
+    anthropic: checkAnthropicKey(),
+    customRpg: checkCustomRpgContent(),
     connection: { ok: !!sock.user, detail: sock.user ? sock.user.id : null },
   };
 }
@@ -127,6 +151,13 @@ const CATALOG = [
   { cmd: ".wa", perm: "todos", deps: [] },
   { cmd: ".owner", perm: "todos", deps: [] },
   { cmd: ".menu / .help", perm: "todos", deps: [] },
+  {
+    cmd: ".rpgcrearclase / .rpgcrearraza",
+    perm: "owner",
+    deps: ["anthropic"],
+    note: "genera contenido nuevo del RPG con la API de Anthropic; cada uso consume saldo de esa cuenta",
+  },
+  { cmd: ".rpgborrarclase / .rpgborrarraza", perm: "owner", deps: [] },
 ];
 
 function evaluate(entry, env, isGroup, botIsAdminHere) {
@@ -184,6 +215,8 @@ module.exports = async function cmdDiag(sock, msg, isGroup, senderIsOwner) {
     `${line("Carpeta auth_info", env.auth)}\n` +
     `${line("Owners en config.js", env.owners)}\n` +
     `${line("Lectura/escritura en data/", env.storage)}\n` +
+    `${line("ANTHROPIC_API_KEY (.rpgcrearclase/.rpgcrearraza)", env.anthropic)}\n` +
+    `${line("Contenido RPG creado con IA", env.customRpg)}\n` +
     `${line("ffmpeg", env.ffmpeg)}\n` +
     `${line("git", env.git)}\n` +
     `${line("yt-dlp", env.ytdlp)}\n` +
