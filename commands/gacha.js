@@ -74,7 +74,7 @@ async function cmdRw(sock, msg, sender) {
     );
   }
 
-  const character = gacha.weightedRandomCharacter();
+  const { character, pityTriggered, pity } = gacha.rollWithPity(num);
   gacha.setPendingRoll(from, {
     charId: character.id,
     rolledBy: num,
@@ -82,9 +82,20 @@ async function cmdRw(sock, msg, sender) {
   });
   gacha.setCooldown(num, "rw");
 
+  let pityLine = "";
+  if (pityTriggered === "mitica") {
+    pityLine = "\n✨ *¡Pity activado!* Se garantizó una mítica.";
+  } else if (pityTriggered === "legendaria") {
+    pityLine = "\n✨ *¡Pity activado!* Se garantizó legendaria o superior.";
+  } else {
+    pityLine =
+      `\n🎯 Pity: ${pity.legendary}/${gacha.PITY_LEGENDARY_THRESHOLD} para legendaria+ · ` +
+      `${pity.mitica}/${gacha.PITY_MITICA_THRESHOLD} para mítica`;
+  }
+
   const text = characterCard(character, {
     header: `🎴 *¡Nuevo personaje disponible!*\n\n`,
-    footer: `\n⏱️ Usa *.clain ${character.name.split(" ")[0]}* dentro de 90s para reclamarlo (cualquiera en el chat puede hacerlo).`,
+    footer: `\n⏱️ Usa *.clain ${character.name.split(" ")[0]}* dentro de 90s para reclamarlo (cualquiera en el chat puede hacerlo).${pityLine}`,
   });
 
   await sock.sendMessage(from, { text }, { quoted: msg });
