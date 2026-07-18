@@ -18,7 +18,7 @@
 
 const { jidToNumber, numberToJid, isParticipantAdmin } = require("../lib/utils");
 const rpg = require("../lib/rpg");
-const { askClaude, extractJson } = require("../lib/aiClient");
+const { askAI, extractJson } = require("../lib/aiClient");
 const rpgAi = require("../lib/rpgAiCreator");
 const customContent = require("../lib/customRpgContent");
 const data = require("../lib/rpgData");
@@ -1077,7 +1077,7 @@ async function cmdRpgCrearClase(sock, msg, args, senderIsOwnerOrCo) {
   await reply(sock, from, msg, "🧠 Generando clase con IA, un momento...");
 
   try {
-    const raw = await askClaude({
+    const raw = await askAI({
       system: rpgAi.CLASS_SYSTEM_PROMPT,
       prompt: rpgAi.buildClassPrompt(slug, description),
     });
@@ -1131,7 +1131,7 @@ async function cmdRpgCrearRaza(sock, msg, args, senderIsOwnerOrCo) {
   await reply(sock, from, msg, "🧠 Generando raza con IA, un momento...");
 
   try {
-    const raw = await askClaude({
+    const raw = await askAI({
       system: rpgAi.RACE_SYSTEM_PROMPT,
       prompt: rpgAi.buildRacePrompt(slug, description),
     });

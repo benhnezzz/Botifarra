@@ -58,15 +58,15 @@ function checkConfigOwners() {
   return { ok: true, detail: `${owners.length} owner(s) configurado(s)` };
 }
 
-function checkAnthropicKey() {
-  const key = process.env.ANTHROPIC_API_KEY;
+function checkGroqKey() {
+  const key = process.env.GROQ_API_KEY;
   if (!key) {
     return { ok: false, reason: "no está definida en el .env (.rpgcrearclase/.rpgcrearraza no van a funcionar)" };
   }
-  if (!key.startsWith("sk-ant-")) {
-    return { ok: false, reason: "está definida pero no parece una clave válida (debería empezar con 'sk-ant-')" };
+  if (!key.startsWith("gsk_")) {
+    return { ok: false, reason: "está definida pero no parece una clave válida (debería empezar con 'gsk_')" };
   }
-  return { ok: true, detail: `${key.slice(0, 10)}…` };
+  return { ok: true, detail: `${key.slice(0, 8)}…` };
 }
 
 function checkCustomRpgContent() {
@@ -97,7 +97,7 @@ async function runEnvironmentChecks(sock) {
     storage: checkStorage(),
     auth: checkAuth(),
     owners: checkConfigOwners(),
-    anthropic: checkAnthropicKey(),
+    groq: checkGroqKey(),
     customRpg: checkCustomRpgContent(),
     connection: { ok: !!sock.user, detail: sock.user ? sock.user.id : null },
   };
@@ -154,8 +154,8 @@ const CATALOG = [
   {
     cmd: ".rpgcrearclase / .rpgcrearraza",
     perm: "owner",
-    deps: ["anthropic"],
-    note: "genera contenido nuevo del RPG con la API de Anthropic; cada uso consume saldo de esa cuenta",
+    deps: ["groq"],
+    note: "genera contenido nuevo del RPG con la API de Groq (gratis, con límites de uso diario)",
   },
   { cmd: ".rpgborrarclase / .rpgborrarraza", perm: "owner", deps: [] },
 ];
@@ -215,7 +215,7 @@ module.exports = async function cmdDiag(sock, msg, isGroup, senderIsOwner) {
     `${line("Carpeta auth_info", env.auth)}\n` +
     `${line("Owners en config.js", env.owners)}\n` +
     `${line("Lectura/escritura en data/", env.storage)}\n` +
-    `${line("ANTHROPIC_API_KEY (.rpgcrearclase/.rpgcrearraza)", env.anthropic)}\n` +
+    `${line("GROQ_API_KEY (.rpgcrearclase/.rpgcrearraza)", env.groq)}\n` +
     `${line("Contenido RPG creado con IA", env.customRpg)}\n` +
     `${line("ffmpeg", env.ffmpeg)}\n` +
     `${line("git", env.git)}\n` +
