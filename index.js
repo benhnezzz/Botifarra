@@ -1,3 +1,7 @@
+// Carga el archivo .env (si existe) ANTES que cualquier otro módulo, porque
+// config.js y varios comandos leen process.env.* apenas se importan.
+require("dotenv").config();
+
 const { getBaileys } = require("./lib/baileysEsm");
 const pino = require("pino");
 const readline = require("readline");
