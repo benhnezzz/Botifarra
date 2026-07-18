@@ -18,6 +18,9 @@
 
 const { jidToNumber, numberToJid, isParticipantAdmin } = require("../lib/utils");
 const rpg = require("../lib/rpg");
+const { askClaude, extractJson } = require("../lib/aiClient");
+const rpgAi = require("../lib/rpgAiCreator");
+const customContent = require("../lib/customRpgContent");
 const data = require("../lib/rpgData");
 
 const PREFIX = "."; // solo para textos de ayuda
@@ -1041,6 +1044,153 @@ async function cmdRpgRanking(sock, msg, args) {
 // ADMIN (owner / co-owner del BOT)
 // ─────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────
+// CREACIÓN DE CONTENIDO CON IA (owner / co-owner del BOT)
+// ─────────────────────────────────────────────────────────────
+
+// .rpgcrearclase <clave> | <breve descripción de cómo funciona>
+// Le pide a la IA (Anthropic) que diseñe una clase inicial + su evolución
+// avanzada a partir de la descripción, y las agrega al juego al instante.
+async function cmdRpgCrearClase(sock, msg, args, senderIsOwnerOrCo) {
+  const from = msg.key.remoteJid;
+  if (!senderIsOwnerOrCo) return reply(sock, from, msg, "⛔ Comando exclusivo del owner/co-owner del bot.");
+
+  const full = args.join(" ");
+  const [slugRaw, ...descParts] = full.split("|");
+  const slug = (slugRaw || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+  const description = descParts.join("|").trim();
+
+  if (!slug || !description) {
+    return reply(
+      sock,
+      from,
+      msg,
+      `📌 Uso: *.rpgcrearclase <clave> | <breve descripción de cómo funciona>*\n` +
+        `Ejemplo: *.rpgcrearclase vampiro | Clase cuerpo a cuerpo que drena vida y se fortalece de noche*`
+    );
+  }
+
+  if (customContent.hasClassKey(slug) || customContent.hasClassKey(`${slug}_asc`)) {
+    return reply(sock, from, msg, `⚠️ Ya existe una clase con la clave \`${slug}\`. Elige otra.`);
+  }
+
+  await reply(sock, from, msg, "🧠 Generando clase con IA, un momento...");
+
+  try {
+    const raw = await askClaude({
+      system: rpgAi.CLASS_SYSTEM_PROMPT,
+      prompt: rpgAi.buildClassPrompt(slug, description),
+    });
+    const json = extractJson(raw);
+    const { inicial, avanzada } = rpgAi.validateClassPair(slug, json);
+    customContent.addCustomClassPair(slug, inicial, avanzada, { rawDescription: description });
+
+    return reply(
+      sock,
+      from,
+      msg,
+      `✅ *Nueva clase: ${inicial.emoji} ${inicial.name}*\n` +
+        `_${inicial.desc}_\n` +
+        `▸ Atributos: ${Object.entries(inicial.baseAttrs)
+          .map(([k, v]) => `${k.toUpperCase()} +${v}`)
+          .join(", ")}\n` +
+        `▸ Habilidades: ${inicial.skills.join(", ")}\n\n` +
+        `🌟 Al llegar a nivel 15 con *.rpgascender* evoluciona a *${avanzada.emoji} ${avanzada.name}*.\n\n` +
+        `Ya disponible: *.rpgcrear <raza> ${slug}*`
+    );
+  } catch (err) {
+    console.error("Error en .rpgcrearclase:", err);
+    return reply(sock, from, msg, `❌ No se pudo generar la clase: ${err.message}`);
+  }
+}
+
+// .rpgcrearraza <clave> | <breve descripción de cómo funciona>
+async function cmdRpgCrearRaza(sock, msg, args, senderIsOwnerOrCo) {
+  const from = msg.key.remoteJid;
+  if (!senderIsOwnerOrCo) return reply(sock, from, msg, "⛔ Comando exclusivo del owner/co-owner del bot.");
+
+  const full = args.join(" ");
+  const [slugRaw, ...descParts] = full.split("|");
+  const slug = (slugRaw || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+  const description = descParts.join("|").trim();
+
+  if (!slug || !description) {
+    return reply(
+      sock,
+      from,
+      msg,
+      `📌 Uso: *.rpgcrearraza <clave> | <breve descripción de cómo funciona>*\n` +
+        `Ejemplo: *.rpgcrearraza nagaru | Raza serpiente de los pantanos, resistente al veneno y ágil en el agua*`
+    );
+  }
+
+  if (customContent.hasRaceKey(slug)) {
+    return reply(sock, from, msg, `⚠️ Ya existe una raza con la clave \`${slug}\`. Elige otra.`);
+  }
+
+  await reply(sock, from, msg, "🧠 Generando raza con IA, un momento...");
+
+  try {
+    const raw = await askClaude({
+      system: rpgAi.RACE_SYSTEM_PROMPT,
+      prompt: rpgAi.buildRacePrompt(slug, description),
+    });
+    const json = extractJson(raw);
+    const race = rpgAi.validateRace(slug, json);
+    customContent.addCustomRace(slug, race);
+
+    return reply(
+      sock,
+      from,
+      msg,
+      `✅ *Nueva raza: ${race.emoji} ${race.name}*\n` +
+        `_${race.desc}_\n` +
+        `▸ Bonos: ${Object.entries(race.bonus)
+          .map(([k, v]) => `${k.toUpperCase()} +${v}`)
+          .join(", ")}\n` +
+        `▸ Pasiva: ${race.passive}\n\n` +
+        `Ya disponible: *.rpgcrear ${slug} <clase>*`
+    );
+  } catch (err) {
+    console.error("Error en .rpgcrearraza:", err);
+    return reply(sock, from, msg, `❌ No se pudo generar la raza: ${err.message}`);
+  }
+}
+
+// .rpgborrarclase <clave> — quita una clase creada por IA (y su avanzada).
+async function cmdRpgBorrarClase(sock, msg, args, senderIsOwnerOrCo) {
+  const from = msg.key.remoteJid;
+  if (!senderIsOwnerOrCo) return reply(sock, from, msg, "⛔ Comando exclusivo del owner/co-owner del bot.");
+  const slug = (args[0] || "").trim().toLowerCase();
+  if (!slug) return reply(sock, from, msg, "📌 Uso: *.rpgborrarclase <clave>*");
+  const ok = customContent.removeCustomClassPair(slug);
+  return reply(
+    sock,
+    from,
+    msg,
+    ok
+      ? `🗑️ Clase \`${slug}\` (y su evolución) eliminada.\n_Nota: si alguien ya la tenía elegida, mejor reasignale clase con .rpgadmin._`
+      : `⚠️ No existe una clase creada por IA con esa clave (las clases fijas del juego no se pueden borrar).`
+  );
+}
+
+// .rpgborrarraza <clave> — quita una raza creada por IA.
+async function cmdRpgBorrarRaza(sock, msg, args, senderIsOwnerOrCo) {
+  const from = msg.key.remoteJid;
+  if (!senderIsOwnerOrCo) return reply(sock, from, msg, "⛔ Comando exclusivo del owner/co-owner del bot.");
+  const slug = (args[0] || "").trim().toLowerCase();
+  if (!slug) return reply(sock, from, msg, "📌 Uso: *.rpgborrarraza <clave>*");
+  const ok = customContent.removeCustomRace(slug);
+  return reply(
+    sock,
+    from,
+    msg,
+    ok
+      ? `🗑️ Raza \`${slug}\` eliminada.`
+      : `⚠️ No existe una raza creada por IA con esa clave (las razas fijas del juego no se pueden borrar).`
+  );
+}
+
 async function cmdRpgAdmin(sock, msg, args, senderIsOwnerOrCo) {
   const from = msg.key.remoteJid;
   if (!senderIsOwnerOrCo) return reply(sock, from, msg, "⛔ Comando exclusivo del owner/co-owner del bot.");
@@ -1103,6 +1253,13 @@ async function routeRpgCommand(sock, msg, args, sender, isGroup, senderIsOwnerOr
   if (sub === "on") return cmdRpgOn(sock, msg, isGroup, sender, senderIsOwnerOrCo);
   if (sub === "off") return cmdRpgOff(sock, msg, isGroup, sender, senderIsOwnerOrCo);
   if (sub === "") return cmdRpgHelp(sock, msg);
+
+  // Creación/borrado de contenido con IA: son comandos globales del owner,
+  // no dependen de que el RPG esté activado en este chat en particular.
+  if (sub === "crearclase") return cmdRpgCrearClase(sock, msg, args, senderIsOwnerOrCo);
+  if (sub === "crearraza") return cmdRpgCrearRaza(sock, msg, args, senderIsOwnerOrCo);
+  if (sub === "borrarclase") return cmdRpgBorrarClase(sock, msg, args, senderIsOwnerOrCo);
+  if (sub === "borrarraza") return cmdRpgBorrarRaza(sock, msg, args, senderIsOwnerOrCo);
 
   // Todo lo demás requiere que el RPG esté activado en este chat.
   if (!rpg.enabledChats.isEnabled(from)) {
