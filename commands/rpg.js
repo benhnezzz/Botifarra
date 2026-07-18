@@ -158,6 +158,12 @@ async function cmdRpgHelp(sock, msg) {
     `┌ 🏆 *RANKING*\n` +
     `│ .rpgranking <nivel|oro|pvp>\n` +
     `└─────────────\n` +
+    `┌ 🛠️ *ADMIN (owner/co-owner)*\n` +
+    `│ .rpgcrearclase <clave> | <desc>\n│ .rpgcrearraza <clave> | <desc>\n` +
+    `│ .rpgmodclase <clave> | <desc>\n│ .rpgmodraza <clave> | <desc>\n` +
+    `│ .rpgborrarclase <clave>\n│ .rpgborrarraza <clave>\n` +
+    `│ .rpgadmin daroro|daritem|setnivel|reset @mención ...\n` +
+    `└─────────────\n` +
     (
       `\n_Elyndor te espera, aventurero. Escribí *.rpgcrear* para empezar._`
     );
