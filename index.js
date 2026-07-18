@@ -66,6 +66,10 @@ const { trackChannel, getLatestChangelogEntry, getChangelogChannel } = require("
 const { cmdC, cmdAct, cmdVer } = require("./commands/adminTools");
 const cmdTts = require("./commands/tts");
 const cmdSetVoz = require("./commands/setVoz");
+// Sistema RPG "Elyndor" -- TODOS sus comandos empiezan con "rpg" (.rpgon,
+// .rpgcrear, etc.), por lo que nunca chocan con ningún comando de arriba.
+// Se enruta desde el `default` del switch de comandos (ver más abajo).
+const { routeRpgCommand } = require("./commands/rpg");
 const {
   cmdCartera,
   cmdDeposit,
@@ -795,6 +799,11 @@ async function startBot() {
             "*.economy* — ver este mismo listado aparte, como comando propio",
           ]);
 
+          const rpgSection = section("🗡️", "RPG — ELYNDOR", [
+            "*.rpgon* / *.rpgoff* — activa/desactiva el RPG en este chat (admin del grupo u owner)",
+            "*.rpg* — ve TODOS los comandos del sistema RPG (personaje, combate, mazmorras, mercado, gremios, etc.)",
+          ]);
+
           const gachaSection = section("🧩", "GACHA (personajes)", [
             "*.gacha* — menú completo con TODOS los comandos de gacha",
             "*.rw* — tira un waifu/husband aleatorio",
@@ -850,7 +859,7 @@ async function startBot() {
             `   🧉 *BOTIFARRA BOT*\n` +
             `╰───────────────────╯\n` +
             `_Prefijo:_ \`.\`   _Escribí *.menu* cuando quieras volver a verlo_\n\n` +
-            `${generalSection}\n\n${economiaSection}\n\n${gachaSection}\n\n${stickersSection}\n\n${descargasSection}\n\n${extrasSection}`;
+            `${generalSection}\n\n${economiaSection}\n\n${rpgSection}\n\n${gachaSection}\n\n${stickersSection}\n\n${descargasSection}\n\n${extrasSection}`;
 
           if (senderIsOwnerOrCo) {
             text += `\n\n${adminSection}\n\n${ownerSection}`;
@@ -865,6 +874,12 @@ async function startBot() {
         }
 
         default:
+          // Cualquier comando que empiece con "rpg" (.rpgon, .rpgcrear,
+          // .rpgperfil, .rpgmazmorra, etc.) se maneja acá. Ningún comando
+          // de arriba usa ese prefijo, así que esto nunca genera conflicto.
+          if (command.startsWith("rpg")) {
+            await routeRpgCommand(sock, msg, args, sender, isGroup, senderIsOwnerOrCo, command);
+          }
           break;
       }
     } catch (err) {
