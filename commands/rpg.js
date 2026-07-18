@@ -1170,7 +1170,7 @@ async function cmdRpgBorrarClase(sock, msg, args, senderIsOwnerOrCo) {
     msg,
     ok
       ? `🗑️ Clase \`${slug}\` (y su evolución) eliminada.\n_Nota: si alguien ya la tenía elegida, mejor reasignale clase con .rpgadmin._`
-      : `⚠️ No existe una clase creada por IA con esa clave (las clases fijas del juego no se pueden borrar).`
+      : `⚠️ No existe una clase creada por IA con esa clave (las clases fijas del juego no se pueden borrar, pero se pueden modificar con *.rpgmodclase*).`
   );
 }
 
@@ -1187,8 +1187,149 @@ async function cmdRpgBorrarRaza(sock, msg, args, senderIsOwnerOrCo) {
     msg,
     ok
       ? `🗑️ Raza \`${slug}\` eliminada.`
-      : `⚠️ No existe una raza creada por IA con esa clave (las razas fijas del juego no se pueden borrar).`
+      : `⚠️ No existe una raza creada por IA con esa clave (las razas fijas del juego no se pueden borrar, pero se pueden modificar con *.rpgmodraza*).`
   );
+}
+
+// .rpgmodclase <clave> | <nueva descripción de cómo funciona>
+// Regenera con IA una clase YA EXISTENTE (fija del juego o creada por IA),
+// conservando su clave interna y su lugar en el árbol de clases (advancesTo
+// / requires), pero con sabor, atributos, multiplicadores y habilidades
+// totalmente nuevos según la nueva descripción.
+async function cmdRpgModClase(sock, msg, args, senderIsOwnerOrCo) {
+  const from = msg.key.remoteJid;
+  if (!senderIsOwnerOrCo) return reply(sock, from, msg, "⛔ Comando exclusivo del owner/co-owner del bot.");
+
+  const full = args.join(" ");
+  const [slugRaw, ...descParts] = full.split("|");
+  const slug = (slugRaw || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+  const description = descParts.join("|").trim();
+
+  if (!slug || !description) {
+    return reply(
+      sock,
+      from,
+      msg,
+      `📌 Uso: *.rpgmodclase <clave> | <nueva descripción de cómo funciona>*\n` +
+        `Ejemplo: *.rpgmodclase guerrero | Ahora pelea con dos armas y sangra a sus enemigos*\n\n` +
+        `Funciona con clases fijas del juego (guerrero, mago, etc.) y con clases creadas por IA.`
+    );
+  }
+
+  const current = data.CLASSES[slug];
+  if (!current) {
+    return reply(sock, from, msg, `⚠️ No existe ninguna clase con la clave \`${slug}\`.`);
+  }
+  if (current.tier !== "inicial") {
+    return reply(
+      sock,
+      from,
+      msg,
+      `⚠️ \`${slug}\` es una clase avanzada, no la inicial. Modificá la clase base (la que evoluciona hacia ella) y su ` +
+        `evolución se regenera junto con ella.`
+    );
+  }
+
+  const isCustom = customContent.isCustomClass(slug);
+  const advancedKey = isCustom ? customContent.getCustomClassMeta()[slug].advancedKey : current.advancesTo;
+
+  if (!advancedKey || !data.CLASSES[advancedKey]) {
+    return reply(sock, from, msg, `⚠️ No se encontró la evolución avanzada de \`${slug}\`; no se puede regenerar el par con seguridad.`);
+  }
+
+  await reply(sock, from, msg, "🧠 Regenerando clase con IA, un momento...");
+
+  try {
+    const raw = await askAI({
+      system: rpgAi.CLASS_SYSTEM_PROMPT,
+      prompt: rpgAi.buildClassModPrompt(slug, description),
+    });
+    const json = extractJson(raw);
+    const { inicial, avanzada } = rpgAi.validateClassPair(slug, json, advancedKey);
+
+    if (isCustom) {
+      customContent.addCustomClassPair(slug, inicial, avanzada, { rawDescription: description, modifiedAt: new Date().toISOString() });
+    } else {
+      customContent.setClassOverride(slug, advancedKey, inicial, avanzada, { rawDescription: description });
+    }
+
+    return reply(
+      sock,
+      from,
+      msg,
+      `✅ *Clase actualizada: ${inicial.emoji} ${inicial.name}*\n` +
+        `_${inicial.desc}_\n` +
+        `▸ Atributos: ${Object.entries(inicial.baseAttrs)
+          .map(([k, v]) => `${k.toUpperCase()} +${v}`)
+          .join(", ")}\n` +
+        `▸ Habilidades: ${inicial.skills.join(", ")}\n\n` +
+        `🌟 Evolución (nivel 15): *${avanzada.emoji} ${avanzada.name}*\n\n` +
+        `⚠️ Los jugadores que ya tenían esta clase quedan con las estadísticas nuevas de inmediato.`
+    );
+  } catch (err) {
+    console.error("Error en .rpgmodclase:", err);
+    return reply(sock, from, msg, `❌ No se pudo regenerar la clase: ${err.message}`);
+  }
+}
+
+// .rpgmodraza <clave> | <nueva descripción de cómo funciona>
+// Regenera con IA una raza YA EXISTENTE (fija del juego o creada por IA).
+async function cmdRpgModRaza(sock, msg, args, senderIsOwnerOrCo) {
+  const from = msg.key.remoteJid;
+  if (!senderIsOwnerOrCo) return reply(sock, from, msg, "⛔ Comando exclusivo del owner/co-owner del bot.");
+
+  const full = args.join(" ");
+  const [slugRaw, ...descParts] = full.split("|");
+  const slug = (slugRaw || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+  const description = descParts.join("|").trim();
+
+  if (!slug || !description) {
+    return reply(
+      sock,
+      from,
+      msg,
+      `📌 Uso: *.rpgmodraza <clave> | <nueva descripción de cómo funciona>*\n` +
+        `Ejemplo: *.rpgmodraza elfo | Ahora son cazadores del desierto resistentes al calor*\n\n` +
+        `Funciona con razas fijas del juego (humano, elfo, etc.) y con razas creadas por IA.`
+    );
+  }
+
+  if (!data.RACES[slug]) {
+    return reply(sock, from, msg, `⚠️ No existe ninguna raza con la clave \`${slug}\`.`);
+  }
+
+  await reply(sock, from, msg, "🧠 Regenerando raza con IA, un momento...");
+
+  try {
+    const raw = await askAI({
+      system: rpgAi.RACE_SYSTEM_PROMPT,
+      prompt: rpgAi.buildRaceModPrompt(slug, description),
+    });
+    const json = extractJson(raw);
+    const race = rpgAi.validateRace(slug, json);
+
+    if (customContent.isCustomRace(slug)) {
+      customContent.addCustomRace(slug, race);
+    } else {
+      customContent.setRaceOverride(slug, race, { rawDescription: description });
+    }
+
+    return reply(
+      sock,
+      from,
+      msg,
+      `✅ *Raza actualizada: ${race.emoji} ${race.name}*\n` +
+        `_${race.desc}_\n` +
+        `▸ Bonos: ${Object.entries(race.bonus)
+          .map(([k, v]) => `${k.toUpperCase()} +${v}`)
+          .join(", ")}\n` +
+        `▸ Pasiva: ${race.passive}\n\n` +
+        `⚠️ Los jugadores que ya tenían esta raza quedan con las estadísticas nuevas de inmediato.`
+    );
+  } catch (err) {
+    console.error("Error en .rpgmodraza:", err);
+    return reply(sock, from, msg, `❌ No se pudo regenerar la raza: ${err.message}`);
+  }
 }
 
 async function cmdRpgAdmin(sock, msg, args, senderIsOwnerOrCo) {
@@ -1258,6 +1399,8 @@ async function routeRpgCommand(sock, msg, args, sender, isGroup, senderIsOwnerOr
   // no dependen de que el RPG esté activado en este chat en particular.
   if (sub === "crearclase") return cmdRpgCrearClase(sock, msg, args, senderIsOwnerOrCo);
   if (sub === "crearraza") return cmdRpgCrearRaza(sock, msg, args, senderIsOwnerOrCo);
+  if (sub === "modclase") return cmdRpgModClase(sock, msg, args, senderIsOwnerOrCo);
+  if (sub === "modraza") return cmdRpgModRaza(sock, msg, args, senderIsOwnerOrCo);
   if (sub === "borrarclase") return cmdRpgBorrarClase(sock, msg, args, senderIsOwnerOrCo);
   if (sub === "borrarraza") return cmdRpgBorrarRaza(sock, msg, args, senderIsOwnerOrCo);
 
